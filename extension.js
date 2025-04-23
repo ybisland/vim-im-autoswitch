@@ -101,7 +101,7 @@ function activate(context) {
 	const disposable = vscode.commands.registerCommand('vim-im-autoswitch.checkIMEState', function () {
 			const imeState = getIMEState();
 			vscode.window.showInformationMessage(`Current IME State: ${imeState}`);
-			console.log('ime status:', imeState);
+			// console.log('ime status:', imeState);
 		});
 
 	context.subscriptions.push(disposable);
@@ -135,8 +135,8 @@ function activate(context) {
 		vscode.window.showErrorMessage('vim-im-autoswitch: vim.cursorStylePerMode is the same for normal and insert mode, so the vim-im-autoswitch will not work.');
 		return;
 	}
-	console.log(`cursorStyleForNormal: ${cursorStyleForNormal}`);
-	console.log(`cursorStyleForInsert: ${cursorStyleForInsert}`);
+	// console.log(`cursorStyleForNormal: ${cursorStyleForNormal}`);
+	// console.log(`cursorStyleForInsert: ${cursorStyleForInsert}`);
 	cursorStyleForInsert = cursorStyleMap[cursorStyleForInsert]; // 从 string 转成 vscode.cursorStyle
 	cursorStyleForNormal = cursorStyleMap[cursorStyleForNormal];
 	//#endregion Get configuration
@@ -157,13 +157,13 @@ function activate(context) {
 							lastIMEStateOnInsert = defaultIMEState_Insert; // 获取失败，使用默认值
 
 						// outputChannel.appendLine(`Last IME state on Insert mode: ${lastIMEStateOnInsert}`);
-						console.log(`Last IME state on Insert mode: ${lastIMEStateOnInsert}`);
+						// console.log(`Last IME state on Insert mode: ${lastIMEStateOnInsert}`);
 					}
 
 					newState = defaultIMEState_Normal;
 					setIMEState(defaultIMEState_Normal);
 					// outputChannel.appendLine(`IME state set to ${newState} for Normal mode.`);
-					console.log(`IME state set to ${newState} for Normal mode.`);
+					// console.log(`IME state set to ${newState} for Normal mode.`);
 					lastCursorStyle = cursorStyle;
 					break;
 				case cursorStyleForInsert: // entering Insert mode
@@ -174,7 +174,7 @@ function activate(context) {
 					}
 					setIMEState(newState);
 					// outputChannel.appendLine(`IME state set to ${newState} for Insert mode.`);
-					console.log(`IME state set to ${newState} for Insert mode.`);
+					// console.log(`IME state set to ${newState} for Insert mode.`);
 					lastCursorStyle = cursorStyle;
 					break;
 				default:
