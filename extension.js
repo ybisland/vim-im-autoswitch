@@ -4,10 +4,12 @@
  * @version 0.1.0
  */
 
+import process from 'process';
+
+
 /**
  * todo:
- * - 检测Host OS类型，仅在Windows上运行
- * - 检测Vim是否安装
+ * - 支持其他输入法
  */
 
 const vscode = require('vscode'); // The module 'vscode' contains the VS Code extensibility API
@@ -90,6 +92,10 @@ function setIMEState(imeState) {
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
+	if (process.platform !== 'win32') {
+		vscode.window.showErrorMessage('vim-im-autoswitch: This extension only works on Windows.');
+		return;
+	}
 
 	// The command has been defined in the package.json file
 	const disposable = vscode.commands.registerCommand('vim-im-autoswitch.checkIMEState', function () {
@@ -113,16 +119,12 @@ function activate(context) {
 	let defaultIMEState_Insert = ourConfig.get('default IME State for Insert Mode', 1);
 	let defaultIMEState_Normal = ourConfig.get('default IME State for Normal Mode', 0);
 
-	// [TODO] 添加输入法预设值
-	// let inputMethodName = config.get('inputMethodName', 'Microsoft Pinyin Input Method');
-
 	const vimConfig = vscode.workspace.getConfiguration('vim');
 	if (!vimConfig) {
 		vscode.window.showErrorMessage('Vim configuration not found.');
 		return;
 	}
 
-	// [TODO] 判断vim是否安装，判断默认vim设置能否使用
 	let cursorStyleForNormal = vimConfig.get('cursorStylePerMode.normal');
 	let cursorStyleForInsert = vimConfig.get('cursorStylePerMode.insert');
 	if (!cursorStyleForNormal || !cursorStyleForInsert) {
