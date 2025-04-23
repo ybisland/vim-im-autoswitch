@@ -1,7 +1,7 @@
 /**
  * @description This is a VS Code extension that interacts with the Windows Input Method Editor (IME) to manage input method states.
  * @author Bin YIN
- * @version 0.1.0
+ * @version 0.1.1
  */
 
 import process from 'process';
