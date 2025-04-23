@@ -1,0 +1,74 @@
+{
+  "name": "vim-im-autoswitch",
+  "displayName": "vim-im-autoswitch",
+  "description": "Auto switch chinese input method when VSCodeVim mode changes.",
+  "version": "0.1.0",
+  "publisher": "ybroxy",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:ybisland/vim-im-autoswitch.git"
+  },
+  "homepage": "https://github.com/ybisland/vim-im-autoswitch",
+  "license": "MIT",
+  "keywords": [
+    "vim",
+    "vi",
+    "vscodevim",
+    "im-select"
+  ],
+
+  "engines": {
+    "vscode": "^1.88.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [{
+      "command": "vim-im-autoswitch.checkIMEState",
+      "title": "Vim Im Autoswitch: Check IME State"
+    }],
+    "configuration": {
+      "type": "object",
+      "title": "Vim IM Autoswitch",
+      "properties": {
+        "vim-im-autoswitch.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic switching of input method based on Vim mode."
+        },
+        "vim-im-autoswitch.default IME State for Insert Mode": {
+          "type": "number",
+          "default": 1,
+          "description": "Default IME state for Insert mode.",
+          "minimum": 0
+        },
+        "vim-im-autoswitch.default IME State for Normal Mode": {
+          "type": "number",
+          "default": 0,
+          "description": "Default IME state for Normal mode.",
+          "minimum": 0
+        },
+        "vim-im-autoswitch.rememberLastIMEState": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remember the IME state when exiting Insert mode and restore it the next time Insert mode is entered."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.88.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "eslint": "^9.23.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1"
+  }
+}
