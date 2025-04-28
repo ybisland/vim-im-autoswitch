@@ -1,17 +1,14 @@
 /**
  * @description This is a VS Code extension that interacts with the Windows Input Method Editor (IME) to manage input method states.
  * @author Bin YIN
- * @version 0.1.1
- */
-
-import process from 'process';
-
-
-/**
- * todo:
+ * @version 0.1.2
+ * 
+ * @todo
  * - 支持其他输入法
+ * 
  */
 
+const process = require('process');
 const vscode = require('vscode'); // The module 'vscode' contains the VS Code extensibility API
 const koffi = require('koffi');   // The module 'koffi' is used to call Win32 API functions. Useful doc:https://docs.ffffee.com/electron/electron-koffi/%E4%BB%80%E4%B9%88%E6%98%AFffi%EF%BC%8C%E6%AF%94%E5%A6%82node.js%E4%B8%AD%E6%9C%89%20koffi%E3%80%81node-ffi.html
 
