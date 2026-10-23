@@ -11,16 +11,16 @@
 const process = require('process');
 const vscode = require('vscode'); // The module 'vscode' contains the VS Code extensibility API
 const koffi = require('koffi');   // The module 'koffi' is used to call Win32 API functions. Useful doc:https://docs.ffffee.com/electron/electron-koffi/%E4%BB%80%E4%B9%88%E6%98%AFffi%EF%BC%8C%E6%AF%94%E5%A6%82node.js%E4%B8%AD%E6%9C%89%20koffi%E3%80%81node-ffi.html
+const { setIMEStateWithFallback } = require('./ime-state');
 
 //#region Win32 API Module
 // Define the types that used in Win32 API
 const HANDLE = koffi.pointer('HANDLE', koffi.opaque());
-const HWND = koffi.alias('HWND', HANDLE);
-const LRESULT = koffi.alias('LRESULT', 'long');
-const DWORD = koffi.alias('DWORD', 'uint32_t');
-const UINT = koffi.alias('UINT', 'unsigned int');
-const WPARAM = koffi.alias('WPARAM', 'unsigned int');
-const LPARAM = koffi.alias('LPARAM', LRESULT);
+koffi.alias('HWND', HANDLE);
+koffi.alias('LRESULT', 'intptr_t');
+koffi.alias('UINT', 'unsigned int');
+koffi.alias('WPARAM', 'uintptr_t');
+koffi.alias('LPARAM', 'intptr_t');
 
 // Load Win32 API DLL
 const user32 = koffi.load('user32.dll');
@@ -30,14 +30,14 @@ const imm32 = koffi.load('imm32.dll');
 const GetForegroundWindow = user32.func('HWND __stdcall GetForegroundWindow()');
 const ImmGetDefaultIMEWnd = imm32.func('HWND __stdcall ImmGetDefaultIMEWnd(HWND)');
 const SendMessageW = user32.func('LRESULT __stdcall SendMessageW(HWND, UINT, WPARAM, LPARAM)');
+const ImmGetContext = imm32.func('HANDLE __stdcall ImmGetContext(HWND)');
+const ImmReleaseContext = imm32.func('int __stdcall ImmReleaseContext(HWND, HANDLE)');
+const ImmSetOpenStatus = imm32.func('int __stdcall ImmSetOpenStatus(HANDLE, int)');
 
 const WM_IME_CONTROL = 0x283;
 const IMC_GETOPENSTATUS = 0x005;
 const IMC_SETOPENSTATUS = 0x006;
 //#endregion
-
-var lastCursorStyle = null; // 记录上一个光标样式
-var lastIMEStateOnInsert = null; // 记录上一个输入法状态
 
 const cursorStyleMap = {
 	'line': vscode.TextEditorCursorStyle.Line,
@@ -71,16 +71,17 @@ function getIMEState() {
  * @returns {number} 1 表示成功，0 表示失败。
  */
 function setIMEState(imeState) {
-    const hWnd = GetForegroundWindow();
-    if (!hWnd) 
-        return -1; // 获取失败
-
-    const defaultIMEWnd = ImmGetDefaultIMEWnd(hWnd);
-    if (!defaultIMEWnd) 
-        return -1; // 获取失败
-
-    const result = SendMessageW(defaultIMEWnd, WM_IME_CONTROL, IMC_SETOPENSTATUS, imeState);
-    return result;
+    return setIMEStateWithFallback(imeState, {
+        getForegroundWindow: GetForegroundWindow,
+        getDefaultIMEWindow: ImmGetDefaultIMEWnd,
+        sendMessage: SendMessageW,
+        getIMEState,
+        getInputContext: ImmGetContext,
+        setOpenStatus: ImmSetOpenStatus,
+        releaseInputContext: ImmReleaseContext,
+        message: WM_IME_CONTROL,
+        setOpenStatusCommand: IMC_SETOPENSTATUS,
+    });
 }
 
 // This method is called when your extension is activated
@@ -108,13 +109,13 @@ function activate(context) {
 
 	//#region Get configuration
 	const ourConfig = vscode.workspace.getConfiguration('vim-im-autoswitch');
-	let autoswitchEnable = ourConfig.get('enable', true);
+	const autoswitchEnable = ourConfig.get('enable', true);
 	if (!autoswitchEnable) {
 		return;
 	}
-	let rememberIMEStateOfInsert = ourConfig.get('rememberLastIMEState', true);
-	let defaultIMEState_Insert = ourConfig.get('default IME State for Insert Mode', 1);
-	let defaultIMEState_Normal = ourConfig.get('default IME State for Normal Mode', 0);
+    const rememberIMEStateOfInsert = ourConfig.get('rememberLastIMEState', true);
+    const defaultIMEState_Insert = ourConfig.get('default IME State for Insert Mode', 1);
+    const defaultIMEState_Normal = ourConfig.get('default IME State for Normal Mode', 0);
 
 	const vimConfig = vscode.workspace.getConfiguration('vim');
 	if (!vimConfig) {
@@ -140,47 +141,31 @@ function activate(context) {
 
 	
 	// 监听编辑器选项的变化（包括光标样式）
-	vscode.window.onDidChangeTextEditorOptions((event) => {
-		const cursorStyle = event.options.cursorStyle;
-		let newState;
-
-		// 根据光标样式推断 Vim 模式
-		if (cursorStyle != lastCursorStyle) {
-			switch (cursorStyle) {
-				case cursorStyleForNormal: // entering Normal mode
-					if (rememberIMEStateOfInsert) {
-						lastIMEStateOnInsert = getIMEState();
-						if (lastIMEStateOnInsert == -1) 
-							lastIMEStateOnInsert = defaultIMEState_Insert; // 获取失败，使用默认值
-
-						// outputChannel.appendLine(`Last IME state on Insert mode: ${lastIMEStateOnInsert}`);
-						// console.log(`Last IME state on Insert mode: ${lastIMEStateOnInsert}`);
-					}
-
-					newState = defaultIMEState_Normal;
-					setIMEState(defaultIMEState_Normal);
-					// outputChannel.appendLine(`IME state set to ${newState} for Normal mode.`);
-					// console.log(`IME state set to ${newState} for Normal mode.`);
-					lastCursorStyle = cursorStyle;
-					break;
-				case cursorStyleForInsert: // entering Insert mode
-					if (rememberIMEStateOfInsert) {
-						newState = lastIMEStateOnInsert;
-					} else {
-						newState = defaultIMEState_Insert;
-					}
-					setIMEState(newState);
-					// outputChannel.appendLine(`IME state set to ${newState} for Insert mode.`);
-					// console.log(`IME state set to ${newState} for Insert mode.`);
-					lastCursorStyle = cursorStyle;
-					break;
-				default:
-					// 其他模式不处理
-					break;
-			}
-
-		}
+	const { createModeSwitcher, createEditorFocusChecker } = require('./mode-switcher');
+	const modeSwitcher = createModeSwitcher({
+		normalCursorStyle: cursorStyleForNormal,
+		insertCursorStyle: cursorStyleForInsert,
+		rememberLastIMEState: rememberIMEStateOfInsert,
+		defaultIMEStateForInsert: defaultIMEState_Insert,
+		defaultIMEStateForNormal: defaultIMEState_Normal,
+		getIMEState,
+		setIMEState,
 	});
+	context.subscriptions.push(vscode.window.onDidChangeTextEditorOptions(modeSwitcher));
+
+	const checkEditorFocus = createEditorFocusChecker({
+		normalCursorStyle: cursorStyleForNormal,
+		defaultIMEStateForNormal: defaultIMEState_Normal,
+		getIMEState,
+		setIMEState,
+	});
+	context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(checkEditorFocus));
+	context.subscriptions.push(vscode.window.onDidChangeWindowState((state) => {
+		if (state.focused) {
+			checkEditorFocus(vscode.window.activeTextEditor);
+		}
+	}));
+	checkEditorFocus(vscode.window.activeTextEditor);
 
 }
 

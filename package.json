@@ -65,6 +65,8 @@
   },
   "scripts": {
     "lint": "eslint .",
+    "test:unit": "node ./test/run.js",
+    "test": "npm run test:unit",
     "pretest": "npm run lint"
   },
   "devDependencies": {
